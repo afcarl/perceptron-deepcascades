@@ -42,6 +42,7 @@ class KernelPerceptron(object):
     def __init__(self, kernel=linear_kernel, T=1):
         self.kernel = kernel
         self.T = T
+        self.K = None
 
     def fit(self, X, y):
         n_samples, n_features = X.shape
@@ -49,19 +50,20 @@ class KernelPerceptron(object):
         self.alpha = np.zeros(n_samples, dtype=np.float64)
 
         # Gram matrix
-        K = np.zeros((n_samples, n_samples))
+        self.K = np.zeros((n_samples, n_samples))
         for i in range(n_samples):
             for j in range(n_samples):
-                K[i,j] = self.kernel(X[i], X[j])
+                self.K[i,j] = self.kernel(X[i], X[j])
 
         for t in range(self.T):
             for i in range(n_samples):
-                if np.sign(np.sum(K[:,i] * self.alpha * y)) != y[i]:
+                if np.sign(np.sum(self.K[:,i] * self.alpha * y)) != y[i]:
                     self.alpha[i] += 1.0
 
         # Support vectors
         sv = self.alpha > 1e-5
         ind = np.arange(len(self.alpha))[sv]
+        self.all_alpha = self.alpha
         self.alpha = self.alpha[sv]
         self.sv = X[sv]
         self.sv_y = y[sv]
