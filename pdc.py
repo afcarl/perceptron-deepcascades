@@ -43,13 +43,18 @@ class PerceptronDeepCascade(object):
     def predict(self, X):
         y = []
         totals = collections.defaultdict(int)
+        for k in range(1,100):
+            try:
+                print 'Actual:', sorted(np.abs(self.h[k].project(X)))
+            except KeyError:
+                break
         for x in X:
             k = 1
             result = None
             while result is None:
                 project = self.h[k].project(np.array([x]))
                 dist = abs(project)
-                if dist >= self.threshold[k]:
+                if dist > self.threshold[k]:
                     result = np.sign(project)
                 k += 1
             totals[k-1] += 1
@@ -78,6 +83,7 @@ def get_threshold(clf, mu, kernel, X_train, y_train):
     projections = clf.project(X_train)
     data = [(X, y, abs(p)) for (X,y,p) in zip(X_train, y_train, projections)]
     data.sort(key=lambda x: x[2])
+    print 'Training:', [p for (X,y,p) in data]
     thres = 0
     added = 0
     latest = None
@@ -110,17 +116,23 @@ class DeepCascades(object):
         y = np.array(y_train)
         dc = PerceptronDeepCascade()
         for k in range(1, L+1):
-            dc.set_mu(k, mu[k-1])
             dc.set_d(k, d[k-1])
             kernel = lambda x,y: perceptron.polynomial_kernel(x, y, d[k-1])
             h_k = perceptron.KernelPerceptron(kernel=kernel, T=self.n_passes)
             h_k.fit(X, y)
             dc.set_classifier(k, h_k)
+            print
+            print
+            print y
             if k==L:
                 dc.set_threshold(k, 0.0)
                 return dc
             else:
+                dc.set_mu(k, mu[k-1])
                 X,y,t = get_threshold(h_k, mu[k-1], kernel, X, y)
+                print y
+                print
+                print
                 dc.set_threshold(k, t)
 
     def mu_permutations(self, L):
@@ -145,7 +157,7 @@ class DeepCascades(object):
     def train(self, X_train, y_train):
         best_error = 1.0
         for L in range(self.minL, self.maxL+1):
-            for mu in self.mu_permutations(L):
+            for mu in self.mu_permutations(L-1):
                 for d in self.d_permutations(L):
                     dc = self.train_cascade(X_train, y_train, L, mu, d)
                     error = dc.gen_error(X_train, y_train)
