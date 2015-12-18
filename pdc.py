@@ -6,6 +6,8 @@ import numpy as np
 from numpy import linalg
 import cPickle as pickle
 import copy
+from sklearn import preprocessing
+import collections
 
 def drange(start, stop, step):
     r = start
@@ -40,26 +42,30 @@ class PerceptronDeepCascade(object):
 
     def predict(self, X):
         y = []
+        totals = collections.defaultdict(int)
         for x in X:
             k = 1
             result = None
             while result is None:
-                x_pred = np.array(x)
-                project = self.h[k].project(np.array([x_pred]))
+                project = self.h[k].project(np.array([x]))
                 dist = abs(project)
                 if dist >= self.threshold[k]:
                     result = np.sign(project)
-                    break
                 k += 1
+            totals[k-1] += 1
             y.append(int(result[0]))
+        print 'm_k:   ' + str(totals)
+        print 'm_k/m: ' + str({k: v/len(X) for (k,v) in totals.items()})
         return np.array(y)
 
     def error(self, X, y):
         y_predict = self.predict(X)
-        incorrect = np.sum(y_predict != np.array(y))
+        incorrect = np.sum(y_predict != y)
         e = incorrect / len(y_predict)
         self.cascade_info()
-        print 'Error: ' + str(e)
+        print 'Training error: ' + str(e)
+        if e >= 0.5:
+            print 'TRAINING ERROR OVER 50%!'
         return e
 
     def gen_error(self, X, y):
@@ -67,10 +73,10 @@ class PerceptronDeepCascade(object):
 
 
 def get_threshold(clf, mu, kernel, X_train, y_train):
-    if mu >= 1.0 or not X_train:
+    if mu >= 1.0 or not len(X_train):
         return 0.0
     projections = clf.project(X_train)
-    data = [(X, y, p) for (X,y,p) in zip(X_train, y_train, projections)]
+    data = [(X, y, abs(p)) for (X,y,p) in zip(X_train, y_train, projections)]
     data.sort(key=lambda x: x[2])
     thres = 0
     added = 0
@@ -80,13 +86,14 @@ def get_threshold(clf, mu, kernel, X_train, y_train):
         added += 1
         if added / len(X_train) >= mu:
             break
-    t = abs(latest[2])
-    X = [d[0] for d in data[:added+1]]
-    y = [d[1] for d in data[:added+1]]
+    t = latest[2]
+    X = np.array([d[0] for d in data[:added+1]])
+    y = np.array([d[1] for d in data[:added+1]])
     return (X,y,t)
 
 class DeepCascades(object):
-    def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=4):
+    def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=50,
+                    increasing_d=True):
         self.minL = minL
         self.maxL = maxL
         self.minMu = minMu
@@ -95,18 +102,19 @@ class DeepCascades(object):
         self.minD = minD
         self.maxD = maxD
         self.n_passes = n_passes
+        self.increasing_d = increasing_d
         self.best = None
 
     def train_cascade(self, X_train, y_train, L, mu, d):
-        X = copy.deepcopy(X_train)
-        y = copy.deepcopy(y_train)
+        X = np.array(X_train)
+        y = np.array(y_train)
         dc = PerceptronDeepCascade()
         for k in range(1, L+1):
             dc.set_mu(k, mu[k-1])
             dc.set_d(k, d[k-1])
             kernel = lambda x,y: perceptron.polynomial_kernel(x, y, d[k-1])
             h_k = perceptron.KernelPerceptron(kernel=kernel, T=self.n_passes)
-            h_k.fit(np.array(X), np.array(y))
+            h_k.fit(X, y)
             dc.set_classifier(k, h_k)
             if k==L:
                 dc.set_threshold(k, 0.0)
@@ -121,15 +129,18 @@ class DeepCascades(object):
         else:
             for p in self.mu_permutations(L-1):
                 for mu in drange(self.minMu, self.maxMu+1e-5, self.muStep):
-                    yield [mu] + p
+                    yield p + [mu]
 
     def d_permutations(self, L):
         if L==0:
             yield []
         else:
             for p in self.d_permutations(L-1):
-                for d in range(self.minD, self.maxD+1):
-                    yield [d] + p
+                start = self.minD
+                if self.increasing_d and p:
+                    start = p[-1]
+                for d in range(start, self.maxD+1):
+                    yield p + [d]
 
     def train(self, X_train, y_train):
         best_error = 1.0
@@ -171,7 +182,15 @@ if __name__ == "__main__":
     (X, y) = load_dataset()
     n = len(X)
     split = int(n * 0.8)
-    X_train, X_test = X[:split], X[split:]
-    y_train, y_test = y[:split], y[split:]
+    X_train, X_test = np.array(X[:split]), np.array(X[split:])
+    y_train, y_test = np.array(y[:split]), np.array(y[split:])
+
+    print 'Scaling the dataset ...'
+    scaler = preprocessing.StandardScaler().fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_test = scaler.transform(X_test)
+    print 'Scaled.'
+
     dcs.train(X_train, y_train)
     dcs.test(X_test, y_test)
+
