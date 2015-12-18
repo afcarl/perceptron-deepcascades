@@ -72,9 +72,6 @@ class KernelPerceptron(object):
         print "%d support vectors out of %d points" % (len(self.alpha),
                                                        n_samples)
 
-    def compute_w_x(self, x):
-        return np.dot(np.multiply(self.all_alpha, self.y), self.kernel(self.X, x))
-
     def project(self, X):
         y_predict = np.zeros(len(X))
         for i in range(len(X)):

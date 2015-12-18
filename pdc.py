@@ -45,9 +45,10 @@ class PerceptronDeepCascade(object):
             result = None
             while result is None:
                 x_pred = np.array(x)
-                dist = abs(self.h[k].compute_w_x(x_pred))
+                project = self.h[k].project(np.array([x_pred]))
+                dist = abs(project)
                 if dist >= self.threshold[k]:
-                    result = self.h[k].predict(x_pred)
+                    result = np.sign(project)
                     break
                 k += 1
             y.append(int(result[0]))
@@ -68,13 +69,14 @@ class PerceptronDeepCascade(object):
 def get_threshold(clf, mu, kernel, X_train, y_train):
     if mu >= 1.0 or not X_train:
         return 0.0
-    data = [(X, y, clf.compute_w_x(X)) for (X,y) in zip(X_train, y_train)]
+    projections = clf.project(X_train)
+    data = [(X, y, p) for (X,y,p) in zip(X_train, y_train, projections)]
     data.sort(key=lambda x: x[2])
     thres = 0
     added = 0
     latest = None
-    for (x,y,z) in data:
-        latest = (x,y,z)
+    for (x,y,p) in data:
+        latest = (x,y,p)
         added += 1
         if added / len(X_train) >= mu:
             break
