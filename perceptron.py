@@ -46,6 +46,8 @@ class KernelPerceptron(object):
 
     def fit(self, X, y):
         n_samples, n_features = X.shape
+        self.X = X
+        self.y = y
         #np.hstack((X, np.ones((n_samples, 1))))
         self.alpha = np.zeros(n_samples, dtype=np.float64)
 
@@ -69,6 +71,9 @@ class KernelPerceptron(object):
         self.sv_y = y[sv]
         print "%d support vectors out of %d points" % (len(self.alpha),
                                                        n_samples)
+
+    def compute_w_x(self, x):
+        return np.dot(np.multiply(self.all_alpha, self.y), self.kernel(self.X, x))
 
     def project(self, X):
         y_predict = np.zeros(len(X))

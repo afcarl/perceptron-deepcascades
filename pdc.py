@@ -16,56 +16,76 @@ def drange(start, stop, step):
 
 class PerceptronDeepCascade(object):
     def __init__(self):
-        pass
-
-    def add_level(self):
-        pass
+        self.mu = {}
+        self.d = {}
+        self.h = {}
+        self.threshold = {}
 
     def set_mu(self, k, mu):
-        pass
+        self.mu[k] = mu
 
     def set_d(self, k, d):
-        pass
+        self.d[k] = d
 
     def set_classifier(self, k, h_k):
-        pass
+        self.h[k] = h_k
 
     def set_threshold(self, k, threshold):
-        pass
+        self.threshold[k] = threshold
+
+    def cascade_info(self):
+        print 'mu: ' + str(self.mu)
+        print 'd: ' + str(self.d)
+        print 'threshold: ' + str(self.threshold)
 
     def predict(self, X):
-        pass
+        y = []
+        for x in X:
+            k = 1
+            result = None
+            while result is None:
+                x_pred = np.array(x)
+                dist = abs(self.h[k].compute_w_x(x_pred))
+                if dist >= self.threshold[k]:
+                    result = self.h[k].predict(x_pred)
+                    break
+                k += 1
+            y.append(int(result[0]))
+        return np.array(y)
 
     def error(self, X, y):
-        pass
+        y_predict = self.predict(X)
+        incorrect = np.sum(y_predict != np.array(y))
+        e = incorrect / len(y_predict)
+        self.cascade_info()
+        print 'Error: ' + str(e)
+        return e
 
     def gen_error(self, X, y):
-        pass
+        return self.error(X, y) # TODO Implement generalization error
 
-
-def copy_deep_cascade(obj):
-    try:
-       return pickle.loads(pickle.dumps(obj, -1))
-    except PicklingError:
-       return copy.deepcopy(obj)
 
 def get_threshold(clf, mu, kernel, X_train, y_train):
-    if mu == 1.0 or not X_train:
+    if mu >= 1.0 or not X_train:
         return 0.0
-    data = [(X, np.sum(clf.K[:,y[0]] * clf.all_alpha * y[1])) for (X,y) in zip(X_train, enumerate(y_train))]
-    data.sort(key=lambda x: x[1])
+    data = [(X, y, clf.compute_w_x(X)) for (X,y) in zip(X_train, y_train)]
+    data.sort(key=lambda x: x[2])
     thres = 0
     added = 0
-    latest = data[0]
-    for (x,z) in data:
-        latest = (x,z)
+    latest = None
+    for (x,y,z) in data:
+        latest = (x,y,z)
         added += 1
         if added / len(X_train) >= mu:
             break
-    return latest[1]
+    t = abs(latest[2])
+    X = [d[0] for d in data[:added+1]]
+    y = [d[1] for d in data[:added+1]]
+    return (X,y,t)
 
 class DeepCascades(object):
-    def __init__(self, maxL=4, minMu=0.1, maxMu=0.9, muStep=0.25, minD=1, maxD=3, n_passes=5):
+    def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=4):
+        self.minL = minL
         self.maxL = maxL
         self.minMu = minMu
         self.maxMu = maxMu
@@ -75,33 +95,50 @@ class DeepCascades(object):
         self.n_passes = n_passes
         self.best = None
 
-    def train(self, X_train, y_train):
+    def train_cascade(self, X_train, y_train, L, mu, d):
         X = copy.deepcopy(X_train)
         y = copy.deepcopy(y_train)
         dc = PerceptronDeepCascade()
-        self.best = None
-        best_error = 1.0
-        for k in range(1, self.maxL+1):
-            dc.add_level()
-            die = False
-            for mu in drange(self.minMu, self.maxMu+1e-5, self.muStep):
-                if k == self.maxL: # this is the last level, deal with all the remaining samples here
-                    mu = 1.0
-                    die = True
-                dc.set_mu(k, mu)
+        for k in range(1, L+1):
+            dc.set_mu(k, mu[k-1])
+            dc.set_d(k, d[k-1])
+            kernel = lambda x,y: perceptron.polynomial_kernel(x, y, d[k-1])
+            h_k = perceptron.KernelPerceptron(kernel=kernel, T=self.n_passes)
+            h_k.fit(np.array(X), np.array(y))
+            dc.set_classifier(k, h_k)
+            if k==L:
+                dc.set_threshold(k, 0.0)
+                return dc
+            else:
+                X,y,t = get_threshold(h_k, mu[k-1], kernel, X, y)
+                dc.set_threshold(k, t)
+
+    def mu_permutations(self, L):
+        if L==0:
+            yield []
+        else:
+            for p in self.mu_permutations(L-1):
+                for mu in drange(self.minMu, self.maxMu+1e-5, self.muStep):
+                    yield [mu] + p
+
+    def d_permutations(self, L):
+        if L==0:
+            yield []
+        else:
+            for p in self.d_permutations(L-1):
                 for d in range(self.minD, self.maxD+1):
-                    dc.set_d(k, d)
-                    kernel = lambda x,y: perceptron.polynomial_kernel(x, y, d)
-                    h_k = perceptron.KernelPerceptron(kernel=kernel, T=self.n_passes)
-                    h_k.fit(np.array(X), np.array(y))
-                    dc.set_classifier(k, h_k)
-                    dc.set_threshold(k, get_threshold(h_k, mu, kernel, X, y))
+                    yield [d] + p
+
+    def train(self, X_train, y_train):
+        best_error = 1.0
+        for L in range(self.minL, self.maxL+1):
+            for mu in self.mu_permutations(L):
+                for d in self.d_permutations(L):
+                    dc = self.train_cascade(X_train, y_train, L, mu, d)
                     error = dc.gen_error(X_train, y_train)
                     if error < best_error:
-                        self.best = copy_deep_cascade(dc)
+                        self.best = dc
                         best_error = error
-                if die:
-                    break
 
     def predict(self, X):
         return self.best.predict(X)
