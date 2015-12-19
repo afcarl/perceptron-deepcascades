@@ -40,6 +40,7 @@ class Perceptron(object):
         X = np.atleast_2d(X)
         return np.sign(self.project(X))
 
+
 class KernelPerceptron(object):
 
     def __init__(self, kernel=linear_kernel, T=1):
@@ -89,6 +90,7 @@ class KernelPerceptron(object):
         n_samples, n_features = X.shape
         #np.hstack((X, np.ones((n_samples, 1))))
         return np.sign(self.project(X))
+
 
 if __name__ == "__main__":
     import pylab as pl
@@ -207,3 +209,4 @@ if __name__ == "__main__":
         plot_contour(X_train[y_train==1], X_train[y_train==-1], clf)
 
     test_kernel()
+

@@ -17,7 +17,8 @@ def drange(start, stop, step):
 
 
 class PerceptronDeepCascade(object):
-    def __init__(self):
+    def __init__(self, gamma):
+        self.gamma = gamma
         self.mu = {}
         self.d = {}
         self.h = {}
@@ -40,10 +41,10 @@ class PerceptronDeepCascade(object):
         print 'd: ' + str(self.d)
         print 'threshold: ' + str(self.threshold)
 
-    def predict(self, X):
+    def predict(self, X, y_true=None):
         y = []
         totals = collections.defaultdict(int)
-        for x in X:
+        for i,x in enumerate(X):
             k = 1
             result = None
             while result is None:
@@ -52,24 +53,34 @@ class PerceptronDeepCascade(object):
                 if dist >= self.threshold[k]:
                     result = np.sign(project)
                 k += 1
-            totals[k-1] += 1
-            y.append(int(result[0]))
-        print 'm_k:   ' + str(totals)
-        print 'm_k/m: ' + str({k: v/len(X) for (k,v) in totals.items()})
-        return np.array(y)
+            y_pred = int(result[0])
+            y.append(y_pred)
+            if not len(y_true) or y_true[i] == y_pred:
+                totals[k-1] += 1
+        mk_m = []
+        k = 1
+        while k in totals:
+            mk_m.append(totals[k] / len(X))
+            k += 1
+        print (len(y_true) and 'm_k+:   ' or 'm_k:   ') + str(totals)
+        print (len(y_true) and 'm_k+/m: ' or 'm_k/m: ') + str(mk_m)
+        return (np.array(y), np.array(mk_m))
 
     def error(self, X, y):
-        y_predict = self.predict(X)
+        (y_predict, mk_m) = self.predict(X, y)
         incorrect = np.sum(y_predict != y)
         e = incorrect / len(y_predict)
         self.cascade_info()
         print 'Training error: ' + str(e)
         if e >= 0.5:
             print 'TRAINING ERROR OVER 50%!'
-        return e
+        return (e, mk_m)
 
     def gen_error(self, X, y):
-        return self.error(X, y) # TODO Implement generalization error
+        (r, mk_m) = self.error(X, y)
+        gerr = r
+        print 'Generalization error: ' + str(gerr)
+        return gerr
 
 
 def get_threshold(clf, mu, kernel, X_train, y_train):
@@ -91,9 +102,10 @@ def get_threshold(clf, mu, kernel, X_train, y_train):
     y = np.array([d[1] for d in data[:added-1]])
     return (X,y,t)
 
+
 class DeepCascades(object):
     def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=50,
-                    increasing_d=True):
+                    increasing_d=True, gamma=1.0):
         self.minL = minL
         self.maxL = maxL
         self.minMu = minMu
@@ -103,12 +115,13 @@ class DeepCascades(object):
         self.maxD = maxD
         self.n_passes = n_passes
         self.increasing_d = increasing_d
+        self.gamma = gamma
         self.best = None
 
     def train_cascade(self, X_train, y_train, L, mu, d):
         X = np.array(X_train)
         y = np.array(y_train)
-        dc = PerceptronDeepCascade()
+        dc = PerceptronDeepCascade(self.gamma)
         for k in range(1, L+1):
             dc.set_d(k, d[k-1])
             kernel = perceptron.poly_kernel(d[k-1])
@@ -176,6 +189,7 @@ def load_dataset():
         X.append(x)
         Y.append(y)
     return (X,Y)
+
 
 if __name__ == "__main__":
     dcs = DeepCascades()
