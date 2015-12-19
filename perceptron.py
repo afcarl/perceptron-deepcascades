@@ -10,6 +10,9 @@ def linear_kernel(x1, x2):
 def polynomial_kernel(x, y, p=3):
     return (1 + np.dot(x, y)) ** p
 
+def poly_kernel(d):
+    return lambda x,y: polynomial_kernel(x,y, d)
+
 def gaussian_kernel(x, y, sigma=5.0):
     return np.exp(-linalg.norm(x-y)**2 / (2 * (sigma ** 2)))
 
