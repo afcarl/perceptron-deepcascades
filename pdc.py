@@ -3,9 +3,6 @@ from __future__ import division
 import perceptron
 import csv
 import numpy as np
-from numpy import linalg
-import cPickle as pickle
-import copy
 from sklearn import preprocessing
 import collections
 from scipy import misc
@@ -130,8 +127,8 @@ def get_threshold(clf, mu, kernel, X_train, y_train):
 
 
 class DeepCascades(object):
-    def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=4,
-                    increasing_d=True, gamma=1e-3):
+    def __init__(self, minL=2, maxL=4, minMu=0.1, maxMu=1.0, muStep=0.1, minD=1, maxD=4, n_passes=4,
+                    increasing_d=True, gamma=1e-3): # TODO need to grid search for optimal gamma 1e-3 to 1e-1
         self.minL = minL
         self.maxL = maxL
         self.minMu = minMu
@@ -198,6 +195,27 @@ class DeepCascades(object):
     def predict(self, X):
         (y, mk) = self.best.predict(X)
         return y
+
+    def test(self, X_test, y_test):
+        print 'Best cascade:'
+        self.best.cascade_info()
+        y_predict = self.predict(X_test)
+        correct = np.sum(y_predict == y_test)
+        print "%d out of %d predictions correct" % (correct, len(y_predict))
+
+
+class PerceptronDummyCascade(object):
+    def __init__(self, d=3, n_passes=4):
+        self.d = d
+        self.n_passes = n_passes
+        self.clf = None
+
+    def train(self, X_train, y_train):
+        self.clf = perceptron.KernelPerceptron(kernel=perceptron.poly_kernel(self.d), T=self.n_passes)
+        self.clf.fit(X_train, y_train)
+
+    def predict(self, X):
+        return self.clf.predict(X)
 
     def test(self, X_test, y_test):
         y_predict = self.predict(X_test)
