@@ -8,12 +8,18 @@ import cPickle as pickle
 import copy
 from sklearn import preprocessing
 import collections
+from scipy import misc
+import math
+import sys
 
 def drange(start, stop, step):
     r = start
     while r < stop:
         yield r
         r += step
+
+def vc_dimension(n_features, degree):
+    return misc.comb(n_features + degree, degree, exact=True)
 
 
 class PerceptronDeepCascade(object):
@@ -22,6 +28,7 @@ class PerceptronDeepCascade(object):
         self.mu = {}
         self.d = {}
         self.h = {}
+        self.mk = collections.defaultdict(int)
         self.threshold = {}
 
     def set_mu(self, k, mu):
@@ -44,6 +51,7 @@ class PerceptronDeepCascade(object):
     def predict(self, X, y_true=None):
         y = []
         totals = collections.defaultdict(int)
+        (self.T, self.n_features) = X.shape
         for i,x in enumerate(X):
             k = 1
             result = None
@@ -55,15 +63,16 @@ class PerceptronDeepCascade(object):
                 k += 1
             y_pred = int(result[0])
             y.append(y_pred)
-            if not len(y_true) or y_true[i] == y_pred:
+            if y_true is None or y_true[i] == y_pred:
                 totals[k-1] += 1
+            self.mk[k-1] += 1
         mk_m = []
         k = 1
         while k in totals:
             mk_m.append(totals[k] / len(X))
             k += 1
-        print (len(y_true) and 'm_k+:   ' or 'm_k:   ') + str(totals)
-        print (len(y_true) and 'm_k+/m: ' or 'm_k/m: ') + str(mk_m)
+        print (y_true is not None and 'm_k+:   ' or 'm_k:   ') + str(totals)
+        print (y_true is not None and 'm_k+/m: ' or 'm_k/m: ') + str(mk_m)
         return (np.array(y), np.array(mk_m))
 
     def error(self, X, y):
@@ -76,9 +85,26 @@ class PerceptronDeepCascade(object):
             print 'TRAINING ERROR OVER 50%!'
         return (e, mk_m)
 
+    def vc_dim_bound(self, k):
+        dim = vc_dimension(self.n_features, self.d[k])
+        term = (dim * math.log(math.e * self.mk[k] / dim))/self.mk[k]
+        if term <= 0.0:
+            return 1.0
+        else:
+            return math.sqrt(term)
+
     def gen_error(self, X, y):
         (r, mk_m) = self.error(X, y)
-        gerr = r
+        s = 0.0
+        L = len(mk_m)
+        for (i, mkm) in enumerate(mk_m):
+            k = i+1
+            lsum = self.vc_dim_bound(k)
+            d_k = k<L and k or k-1
+            for j in range(1, d_k+1):
+                lsum += self.vc_dim_bound(j)
+            s += min(4.0 * self.gamma * lsum, mkm)
+        gerr = r + s
         print 'Generalization error: ' + str(gerr)
         return gerr
 
@@ -104,8 +130,8 @@ def get_threshold(clf, mu, kernel, X_train, y_train):
 
 
 class DeepCascades(object):
-    def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=50,
-                    increasing_d=True, gamma=1.0):
+    def __init__(self, minL=2, maxL=4, minMu=0.25, maxMu=0.75, muStep=0.25, minD=1, maxD=3, n_passes=4,
+                    increasing_d=True, gamma=1e-3):
         self.minL = minL
         self.maxL = maxL
         self.minMu = minMu
@@ -156,18 +182,22 @@ class DeepCascades(object):
                     yield p + [d]
 
     def train(self, X_train, y_train):
+        times = 0
         best_error = 1.0
         for L in range(self.minL, self.maxL+1):
             for mu in self.mu_permutations(L-1):
                 for d in self.d_permutations(L):
                     dc = self.train_cascade(X_train, y_train, L, mu, d)
+                    times += 1
                     error = dc.gen_error(X_train, y_train)
                     if error < best_error:
                         self.best = dc
                         best_error = error
+        print 'Generated %d cascades' % (times,)
 
     def predict(self, X):
-        return self.best.predict(X)
+        (y, mk) = self.best.predict(X)
+        return y
 
     def test(self, X_test, y_test):
         y_predict = self.predict(X_test)
@@ -192,7 +222,12 @@ def load_dataset():
 
 
 if __name__ == "__main__":
-    dcs = DeepCascades()
+    dcs = None
+    if len(sys.argv) > 1:
+        dcs = DeepCascades(gamma=sys.argv[1])
+    else:
+        dcs = DeepCascades()
+
     (X, y) = load_dataset()
     n = len(X)
     split = int(n * 0.8)

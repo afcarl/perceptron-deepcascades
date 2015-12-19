@@ -4,8 +4,8 @@ import numpy as np
 import pylab as pl
 
 class PerceptronTest(object):
-    def __init__(self, passes=3):
-        self.pclf = perceptron.Perceptron(T=passes)
+    def __init__(self, passes=5000):
+        self.pclf = perceptron.KernelPerceptron(kernel=perceptron.linear_kernel, T=passes)
 
     def train(self, X_train, y_train):
         self.X_train = np.array(X_train)
@@ -86,8 +86,8 @@ if __name__ == "__main__":
 
     def gen_lin_separable_overlap_data():
         # generate training data in the 2-d case
-        mean1 = np.array([0, 2])
-        mean2 = np.array([2, 0])
+        mean1 = np.array([5, 5])
+        mean2 = np.array([9, 9])
         cov = np.array([[1.5, 1.0], [1.0, 1.5]])
         X1 = np.random.multivariate_normal(mean1, cov, 100)
         y1 = np.ones(len(X1))
