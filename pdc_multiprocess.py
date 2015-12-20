@@ -1,6 +1,7 @@
 import subprocess32
 import sys
 import random
+import os
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -11,11 +12,11 @@ if __name__ == '__main__':
     processes = []
     dumps = []
 
-    for mu in [0.2, 0.4, 0.6, 0.8]:
-        dumpname = 'dump_%.1f_%d' % (mu, random.randint(1000,9999))
+    for L in range(2,4+1):
+        dumpname = 'dump_%d_%d' % (L, random.randint(1000,9999))
         dumps.append(dumpname)
-        processes.append(subprocess32.Popen(["python", "pdc.py", "-l2", "-L4", "-m%.1f" % mu, "-M%.1f" % mu, "-g%.1f" % gamma, "-d1", "-D4",
-            "-f%s" % dumpname], stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr))
+        processes.append(subprocess32.Popen(["python", "pdc.py", "-l%d" % L, "-L%d" % L, "-m0.2", "-M0.8", "-s0.2",
+            "-g%.1f" % gamma, "-d1", "-D4", "-f%s" % dumpname], stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr))
 
     print 'All processes started'
 
@@ -25,6 +26,12 @@ if __name__ == '__main__':
     print 'All processes finished, merging results ...'
 
     subprocess32.Popen(["python", "compare_dumps.py", "-ocascade"] + dumps, stdin=sys.stdin, stdout=sys.stdout,
-            stderr=sys.stderr)
+            stderr=sys.stderr).wait()
+
+    for d in dumps:
+        try:
+            os.remove(d)
+        except OSError:
+            pass
 
     print 'Everything done.'
