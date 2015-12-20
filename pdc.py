@@ -272,8 +272,6 @@ def load_dataset(train, test=None):
     X_train = []
     y_train = []
     for r in rows:
-        for i in range(len(r)):
-            if r[i]=='?': r[i] = 0
         x = [float(e) for e in r[:-1]]
         y = int(r[-1])
         X_train.append(x)
@@ -327,7 +325,7 @@ if __name__ == "__main__":
     increasing_d = True
     gamma = 1e-3
     dump = None
-    train_file = 'breast_cancer.csv'
+    train_file = 'breast_cancer_train'
     test_file = None
 
     try:
