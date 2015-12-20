@@ -26,8 +26,7 @@ if __name__ == '__main__':
         print >> sys.stderr, 'Syntax: python compare_dumps.py -ooutdump indump1 indump2 ...'
         sys.exit(1)
 
-    (X, y) = pdc.load_dataset()
-    (X_train, y_train, X_test, y_test) = pdc.split_dataset(X, y)
+    (X_train, y_train, X_test, y_test) = pdc.load_dataset(X, y)
 
     dcs = pdc.DeepCascades(cascades=dcs, dump=dump)
     dcs.find_best(X_train, y_train)

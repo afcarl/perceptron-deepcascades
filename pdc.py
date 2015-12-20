@@ -264,26 +264,41 @@ class PerceptronDummyCascade(object):
         print "%d out of %d predictions correct" % (correct, len(y_predict))
 
 
-def load_dataset():
-    f = open('breast_cancer.csv', 'rb')
+def load_dataset(train, test=None):
+    f = open(train, 'rb')
     reader = csv.reader(f)
     rows = [r for r in reader]
     f.close()
-    X = []
-    Y = []
-    for r in rows[1:]:
+    X_train = []
+    y_train = []
+    for r in rows:
+        for i in range(len(r)):
+            if r[i]=='?': r[i] = 0
         x = [float(e) for e in r[:-1]]
         y = int(r[-1])
-        if y==0: y=-1
-        X.append(x)
-        Y.append(y)
-    return (X,Y)
-
-def split_dataset(X,y):
-    n = len(X)
-    split = int(n * 0.8)
-    X_train, X_test = np.array(X[:split]), np.array(X[split:])
-    y_train, y_test = np.array(y[:split]), np.array(y[split:])
+        X_train.append(x)
+        y_train.append(y)
+    if not test:
+        n = len(X_train)
+        split = int(n * 0.8)
+        X_train, X_test = np.array(X_train[:split]), np.array(X_train[split:])
+        y_train, y_test = np.array(y_train[:split]), np.array(y_train[split:])
+    else:
+        f = open(test, 'rb')
+        reader = csv.reader(f)
+        rows = [r for r in reader]
+        f.close()
+        X_test = []
+        y_test = []
+        for r in rows:
+            for i in range(len(r)):
+                if r[i]=='?': r[i] = 0
+            x = [float(e) for e in r[:-1]]
+            y = int(r[-1])
+            X_test.append(x)
+            y_test.append(y)
+        X_train, X_test = np.array(X_train), np.array(X_test)
+        y_train, y_test = np.array(y_train), np.array(y_test)
     print 'Scaling the dataset ...'
     scaler = preprocessing.StandardScaler().fit(X_train)
     X_train = scaler.transform(X_train)
@@ -312,11 +327,13 @@ if __name__ == "__main__":
     increasing_d = True
     gamma = 1e-3
     dump = None
+    train_file = 'breast_cancer.csv'
+    test_file = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "l:L:m:M:s:d:D:p:ng:f:h", ["minL=", "maxL=", "minMu=", "maxMu=",
+        opts, args = getopt.getopt(sys.argv[1:], "l:L:m:M:s:d:D:p:ng:f:t:T:h", ["minL=", "maxL=", "minMu=", "maxMu=",
                                                  "muStep=", "minD=", "maxD=", "passes=", "not-increasing-h", "gamma=",
-                                                 "dump-file=", "--help"])
+                                                 "dump-file=", "train-file=", "test-file=", "--help"])
         for opt, arg in opts:
             if opt in ("-l", "--minL"):
                 minL = int(arg)
@@ -340,6 +357,10 @@ if __name__ == "__main__":
                 gamma = float(arg)
             if opt in ("-f", "--dump-file"):
                 dump = arg
+            if opt in ("-t", "--train-file"):
+                train_file = arg
+            if opt in ("-T", "--test-file"):
+                test_file = arg
             if opt in ("-h", "--help"):
                 usage(out=sys.stdout)
                 sys.exit()
@@ -349,8 +370,7 @@ if __name__ == "__main__":
         usage()
         sys.exit(2)
 
-    (X, y) = load_dataset()
-    (X_train, y_train, X_test, y_test) = split_dataset(X, y)
+    (X_train, y_train, X_test, y_test) = load_dataset(train_file, test_file)
 
     dcs = DeepCascades(minL=minL, maxL=maxL, minMu=minMu, maxMu=maxMu, muStep=muStep, minD=minD, maxD=maxD,
                        n_passes=n_passes, increasing_d=increasing_d, gamma=gamma, dump=dump)
