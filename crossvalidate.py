@@ -5,7 +5,7 @@ import os
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print >> sys.stderr, 'Please supply a dataset prefix and gamma. For example: python crossvalidate.py breast_cancer 1e-2'
+        print >> sys.stderr, 'Please supply a dataset prefix and gamma. For example: python crossvalidate.py breast_cancer_train 1e-2'
         sys.exit(1)
     dataset = sys.argv[1]
     gamma = float(sys.argv[2])

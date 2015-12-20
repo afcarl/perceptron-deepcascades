@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     print 'All processes finished, merging results ...'
 
-    subprocess32.Popen(["python", "compare_dumps.py", "%s:%s" % (train_file, test_file), "-odc_%s_%f" % (train_file, gamma)] + dumps,
+    subprocess32.Popen(["python", "compare_dumps.py", "%s:%s" % (train_file, test_file), "-ocascade_%s_%f" % (train_file, gamma)] + dumps,
             stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr).wait()
 
     for d in dumps:
