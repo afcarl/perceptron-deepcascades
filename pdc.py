@@ -7,7 +7,9 @@ from sklearn import preprocessing
 import collections
 from scipy import misc
 import math
+import cPickle as pickle
 import sys
+import getopt
 
 def drange(start, stop, step):
     r = start
@@ -125,10 +127,23 @@ def get_threshold(clf, mu, kernel, X_train, y_train):
     y = np.array([d[1] for d in data[:added-1]])
     return (X,y,t)
 
+def dump_cascade(dc, f):
+    for h in dc.h.values():
+        h.kernel = None
+    pickle.dump(dc, f, -1)
+    for (k,h) in dc.h.items():
+        h.kernel = perceptron.poly_kernel(dc.d[k])
+
+def load_cascade(f):
+    dc = pickle.load(f)
+    for (k,h) in dc.h.items():
+        h.kernel = perceptron.poly_kernel(dc.d[k])
+    return dc
+
 
 class DeepCascades(object):
-    def __init__(self, minL=2, maxL=4, minMu=0.1, maxMu=1.0, muStep=0.1, minD=1, maxD=4, n_passes=4,
-                    increasing_d=True, gamma=1e-3): # TODO need to grid search for optimal gamma 1e-3 to 1e-1
+    def __init__(self, minL=None, maxL=None, minMu=None, maxMu=None, muStep=None, minD=None, maxD=None, n_passes=None,
+                       increasing_d=None, gamma=None, dump=None, cascades=None):
         self.minL = minL
         self.maxL = maxL
         self.minMu = minMu
@@ -139,7 +154,9 @@ class DeepCascades(object):
         self.n_passes = n_passes
         self.increasing_d = increasing_d
         self.gamma = gamma
+        self.dump = dump
         self.best = None
+        self.cascades = cascades
 
     def train_cascade(self, X_train, y_train, L, mu, d):
         X = np.array(X_train)
@@ -184,7 +201,7 @@ class DeepCascades(object):
 
     def train(self, X_train, y_train):
         times = 0
-        best_error = 1.0
+        best_error = 2.0
         for L in range(self.minL, self.maxL+1):
             for mu in self.mu_permutations(L-1):
                 for d in self.d_permutations(L):
@@ -195,6 +212,27 @@ class DeepCascades(object):
                         self.best = dc
                         best_error = error
         print 'Generated %d cascades' % (times,)
+        if self.dump is not None:
+            print 'Writing best model to dump file'
+            f = open(self.dump, 'wb')
+            dump_cascade(self.best, f)
+            f.close()
+            print 'Dumped.'
+
+    def find_best(self, X_train, y_train):
+        print 'Finding the best cascade from %d cascades ...' % len(self.cascades)
+        best_error = 2.0
+        for dc in self.cascades:
+            error = dc.gen_error(X_train, y_train)
+            if error < best_error:
+                self.best = dc
+                best_error = error
+        if self.dump is not None:
+            print 'Writing best model to dump file'
+            f = open(self.dump, 'wb')
+            dump_cascade(self.best, f)
+            f.close()
+            print 'Dumped.'
 
     def predict(self, X):
         (y, mk) = self.best.predict(X)
@@ -242,26 +280,81 @@ def load_dataset():
         Y.append(y)
     return (X,Y)
 
-
-if __name__ == "__main__":
-    dcs = None
-    if len(sys.argv) > 1:
-        dcs = DeepCascades(gamma=sys.argv[1])
-    else:
-        dcs = DeepCascades()
-
-    (X, y) = load_dataset()
+def split_dataset(X,y):
     n = len(X)
     split = int(n * 0.8)
     X_train, X_test = np.array(X[:split]), np.array(X[split:])
     y_train, y_test = np.array(y[:split]), np.array(y[split:])
-
     print 'Scaling the dataset ...'
     scaler = preprocessing.StandardScaler().fit(X_train)
     X_train = scaler.transform(X_train)
     X_test = scaler.transform(X_test)
     print 'Scaled.'
+    return (X_train, y_train, X_test, y_test)
 
+def usage(out=sys.stderr):
+    print >> out, '''Example 1: python pdc.py -l2 -L4 -m0.1 -M1.0 -g10e-3 -fdump.dat
+Example 2: python pdc.py --minL=2 --maxL=4 --minMu=0.1 --maxMu=1.0 --gamma=10e-3 --dump-file=dump.dat
+
+See pdc.py for more options.
+'''
+
+
+if __name__ == "__main__":
+    # defaults
+    minL = 2
+    maxL = 4
+    minMu = 0.1
+    maxMu = 1.0
+    muStep = 0.1
+    minD = 1
+    maxD = 4
+    n_passes = 4
+    increasing_d = True
+    gamma = 1e-3
+    dump = None
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "l:L:m:M:s:d:D:p:ng:f:h", ["minL=", "maxL=", "minMu=", "maxMu=",
+                                                 "muStep=", "minD=", "maxD=", "passes=", "not-increasing-h", "gamma=",
+                                                 "dump-file=", "--help"])
+        for opt, arg in opts:
+            if opt in ("-l", "--minL"):
+                minL = int(arg)
+            if opt in ("-L", "--maxL"):
+                maxL = int(arg)
+            if opt in ("-m", "--minMu"):
+                minMu = float(arg)
+            if opt in ("-M", "--maxMu"):
+                maxMu = float(arg)
+            if opt in ("-s", "--muStep"):
+                muStep = float(arg)
+            if opt in ("-d", "--minD"):
+                minD = int(arg)
+            if opt in ("-D", "--maxD"):
+                maxD = int(arg)
+            if opt in ("-p", "--passes"):
+                n_passes = int(arg)
+            if opt in ("-n", "--not-increasing-h"):
+                increasing_d = False
+            if opt in ("-g", "--gamma"):
+                gamma = float(arg)
+            if opt in ("-f", "--dump-file"):
+                dump = arg
+            if opt in ("-h", "--help"):
+                usage(out=sys.stdout)
+                sys.exit()
+        if not opts:
+            usage(out=sys.stdout)
+    except (getopt.GetoptError):
+        usage()
+        sys.exit(2)
+
+    (X, y) = load_dataset()
+    (X_train, y_train, X_test, y_test) = split_dataset(X, y)
+
+    dcs = DeepCascades(minL=minL, maxL=maxL, minMu=minMu, maxMu=maxMu, muStep=muStep, minD=minD, maxD=maxD,
+                       n_passes=n_passes, increasing_d=increasing_d, gamma=gamma, dump=dump)
     dcs.train(X_train, y_train)
     dcs.test(X_test, y_test)
 
