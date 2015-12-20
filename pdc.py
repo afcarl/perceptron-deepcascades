@@ -304,9 +304,9 @@ if __name__ == "__main__":
     # defaults
     minL = 2
     maxL = 4
-    minMu = 0.1
-    maxMu = 1.0
-    muStep = 0.1
+    minMu = 0.2
+    maxMu = 0.8
+    muStep = 0.2
     minD = 1
     maxD = 4
     n_passes = 4
