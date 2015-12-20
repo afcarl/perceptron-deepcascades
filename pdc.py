@@ -86,11 +86,10 @@ class PerceptronDeepCascade(object):
 
     def vc_dim_bound(self, k):
         dim = vc_dimension(self.n_features, self.d[k])
-        term = (dim * math.log(math.e * self.mk[k] / dim))/self.mk[k]
-        if term <= 0.0:
-            return 1.0
+        if self.mk[k] < dim:
+            return math.sqrt(2 * math.log(2))
         else:
-            return math.sqrt(term)
+            return math.sqrt((2 * dim * math.log(math.e * self.mk[k] / dim))/self.mk[k])
 
     def gen_error(self, X, y):
         (r, mk_m) = self.error(X, y)
