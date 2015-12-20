@@ -13,7 +13,7 @@ if __name__ == '__main__':
     reader = csv.reader(f)
     rows = [r for r in reader]
     random.shuffle(rows)
-    n = len(X_train)
+    n = len(rows)
     split = int(n * 0.8)
 
     for r in rows:
