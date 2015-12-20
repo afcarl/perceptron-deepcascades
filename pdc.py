@@ -144,6 +144,7 @@ class DeepCascades(object):
     def train_cascade(self, X_train, y_train, L, mu, d):
         X = np.array(X_train)
         y = np.array(y_train)
+        n_samples, n_features = X.shape
         dc = PerceptronDeepCascade(self.gamma)
         for k in range(1, L+1):
             dc.set_d(k, d[k-1])
@@ -157,6 +158,9 @@ class DeepCascades(object):
             else:
                 dc.set_mu(k, mu[k-1])
                 X,y,t = get_threshold(h_k, mu[k-1], kernel, X, y)
+                if not len(y):
+                    X = np.zeros((1, n_features))
+                    y = np.array([1])
                 dc.set_threshold(k, t)
 
     def mu_permutations(self, L):

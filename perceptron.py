@@ -87,8 +87,6 @@ class KernelPerceptron(object):
 
     def predict(self, X):
         X = np.atleast_2d(X)
-        n_samples, n_features = X.shape
-        #np.hstack((X, np.ones((n_samples, 1))))
         return np.sign(self.project(X))
 
 
