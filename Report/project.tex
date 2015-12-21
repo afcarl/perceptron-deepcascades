@@ -195,8 +195,8 @@ We have adapted the deep cascades to work with kernelized perceptrons serving as
 		\State{$S_1 \gets S$}
 		\For{$ k = 1$ to $l$}
 			\State{$h_k \gets$ KernelizedPerceptron$(S_k,poly\_kernel(\delta_k))$}
-			\State{$threshold \gets$ get\_distance$(S_k,h_k,\mu_k,poly\_kernel(\delta_k))$}	\Comment{Gets the distance of $\mu_k$ fraction of closest point from hyperplane}
-			\State{$q_k \gets 1_{dist(x,h_k) \leq threshold}$}
+			\State{$threshold \gets c_k : |\{ x_t : \sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x_t) \leq c_k \}| = \mu_k|S_k| $}	%\Comment{Gets the distance of $\mu_k$ fraction of closest point from hyperplane}
+			\State{$q_k \gets 1_{\sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x) \leq threshold}$}
 			\State{$S_{k+1} \gets q_{k}^{-1}(1) \cap S_k$}
 		\EndFor
 		\State{$f(\cdot) \gets \sum_{k=1}^{l-1} \left( \prod_{j=1}^{k-1} q_j \right) \bar{q_k}h_k + \left( \prod_{j=1}^{l} q_j \right) h_l$}
@@ -207,14 +207,14 @@ We have adapted the deep cascades to work with kernelized perceptrons serving as
 \end{algorithmic}
 }
 The sample set is standardized using standard scaling before being sent to the algorithm. This is done to center the data and normalize it. The same scaling is applied to the test data as well. This centered scaling becomes quite important in the case of perceptrons as it learns only a linear homogeneous threshold function.
-\\The algorithm essentially consists of training perceptrons $h_k$ at each level (total of $l$ levels) with the incoming points using polynomial kernels of dimension $\delta_k$. Once the perceptron at level $k$ is trained on $S_k$, the distances to all points are measured as $w_k.x = \sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x_t)$ (ignoring the factor of $\lVert w_k \rVert$ as we just want to get the $\mu_k$ fraction of closest points). With the distances calculated we decide on a threshold as the distance from the hyperplane such that $\mu_k|S_k|$ points lie within that distance. The node question is then: whether or not a given point lies within this threshold from the trained hyperplane. This process is then repeated for each level.
+\\The algorithm essentially consists of training perceptrons $h_k$ at each level (total of $l$ levels) with the incoming points using polynomial kernels of dimension $\delta_k$. Once the perceptron at level $k$ is trained on $S_k$, the distances to all points are measured as $w_k.x = \sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x)$ (ignoring the factor of $\lVert w_k \rVert$ as we just want to get the $\mu_k$ fraction of closest points). With the distances calculated we decide on a threshold as the distance from the hyperplane such that $\mu_k|S_k|$ points lie within that distance. The node question is then: whether or not a given point lies within this threshold from the trained hyperplane. This process is then repeated for each level.
 \\The algorithm generates multiple cascades for each of the depth $l \in [1 \cdots L]$, any sequence of fraction values $(\mu_k)_{1 \leq k \leq l} \subseteq \mathcal{M}$ and sequence of polynomial kernel degrees $(\delta_k)_{1 \leq k \leq l} \subseteq \mathcal{G}$. The node question and leaf hypothesis for these cascades are chosen as described above. Then the best cascade $f^*$ is chosen as the one that minimizes an upper bound on the generalization error bound of (\ref{dcbound}) similar to what is done for the DeepCascadeSVM \cite{deepcascades}. That is $f^*$ is chosen to minimize the bound:
 \begin{equation}
 R(f) \leq \widehat{R}_s(f) + \sum_{k=1}^{l} \min \left( 4\gamma \left[ \sum_{j=1}^{d_k} \sqrt{\frac{d_{f,j} \log\frac{em}{d_{f,j}}}{m}} + \sqrt{\frac{d_{f,k} \log\frac{em}{d_{f,k}}}{m}} \right] , \frac{m_k^+}{m} \right)
 \label{dcvcbound}
 \end{equation}
 where $d_k$ is the depth of node $k$ and $d_{f,k}$ is the VC dimension of the perceptron trained at level $k$ and the $\gamma$ parameter is introduced to scale the loss function. %TODO:Re-check.
-\\The VC dimension of a perceptron accepting samples of dimension $n$ and working with a polynomial kernel of dimension $\delta$ is $\binom{n+\delta}{\delta}$. This can be seen by the definition of polynomial kernel: ($K(x,y) = (1+x \cdot y)^\delta$) and using multinomial theorem.
+\\The VC dimension of a perceptron accepting samples of dimension $n$ and working with a polynomial kernel of degree $\delta$ is $\binom{n+\delta}{\delta}$. This can be seen by the definition of polynomial kernel: ($K(x,y) = (1+x \cdot y)^\delta$) and using multinomial theorem.
 \\The $\gamma$ is selected by doing a n-fold cross validation to select the best $\gamma$ from a set of values.
 
 \section{Experiments}
@@ -222,12 +222,28 @@ We performed some preliminary experiments on the \emph{breastcancer, ionosphere}
 \\In our experiments we used the following parameters: max cascade depth $L=4$, the set of fraction values was chosen as $\mathcal{M} = \{ 0.2,0.4,0.6,0.8 \}$ and the degree of the kernels were chosen from $\mathcal{G} = \{ 1 \cdots 4 \}$.
 \\We have split our dataset into a $80\%$ training set and $20\%$ test set. The training set was inturn split into 3 folds and for each fold leaving that out for validation we trained on the other two. This way a 3-fold cross validation was performed to figure out the correct $\gamma \in \{ 10^{-i} : i \in \{ 0,1,2,3 \} \}$.
 \begin{table}[h]
-\begin{tabular}{| l | l | l | l | l |}
+\begin{tabular}{| l | l | l | l |}
 \hline
-Dataset & Number of examples & Number of features & DeepCascadePerceptron & Cascade Depth\\
+Dataset & Number of examples & Number of features & DeepCascadePerceptron\\
+&&&Validation error $\pm$ Deviation \\
+\hline
+breastcancer & 699 & 9 & 0.036 $\pm$ 0.008 \\ 
+ionosphere & 351 & 34 & 0.071 $\pm$ 0.032 \\
 \hline
 \end{tabular}
-\caption{Test error for DeepCascadePerceptron}
+\caption{Cross Validation error for DeepCascadePerceptron}
+\end{table}
+
+\begin{table}[h]
+\begin{tabular}{| l | l | l | l | l |}
+\hline
+Dataset & Cascade Depth & DeepCascadePerceptron & SVM & Perceptron\\
+\hline
+breastcancer & 4 & 0.02 & 0.036 & 0.036 \\ 
+ionosphere & 2 & 0.126 & 0.071 & 0.112 \\
+\hline
+\end{tabular}
+\caption{Test error for DeepCascadePerceptron, SVM, Kernelized Perceptron run on the same set}
 \end{table}
 
 
