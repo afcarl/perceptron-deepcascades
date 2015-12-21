@@ -78,18 +78,17 @@
 \maketitle
 \section{Introduction}
 
-The Deep Cascades \cite{deepcascades} algorithm is a cascade of a rich family of functions structured as a decision tree, with the  node question and leaf predictors being picked from this family. The algorithm exhibits data dependent guarantees that allows for use of such a rich family of functions. The paper talks about using SVMs as the set of functions and elaborates on how the deep cascades algorithm is adapted for use with SVMs.
-\\We look at adapting the Deep cascade algorithm to work with the Perceptron algorithm as described in \cite{rosenblatt1958perceptron} and it's kernelized variant \cite{kernelizedperceptron} as the rich set of function. The perceptron algorithm learns a linear separator in an online fashion, examining one point at a time. We have however used this in a batch setting with the use of polynomial kernels.
-\\We also show how this performs faster than an SVM based cascade while still benefiting from nature of the cascade.
+The Deep Cascades \cite{deepcascades} algorithm generates a cascade, using rich families of functions, structured as a decision tree with the node question and leaf predictors being picked from these rich families. The algorithm exhibits strong data dependent guarantees that allow for use of such rich families of functions. The cited paper talks about using kernelized SVMs for training cascades with complex hypotheses at the leaf nodes and elaborates on how the deep cascades algorithm is adapted for use with SVMs.
+\\We look at adapting the Deep cascade algorithm to work with the Perceptron algorithm \cite{rosenblatt1958perceptron} and it's kernelized variant \cite{kernelizedperceptron} to provide a rich set of functions. The perceptron algorithm learns a linear separator in an online fashion, examining one point at a time. We have, however, used it in a batch setting making use of polynomial kernels.
 \section{Background on Deep Cascades, Perceptron}
 \subsection{Deep Cascades}
 %Write some prelim stuff here
-The paper on Deep cascades presents data dependent generalization guarantees for cascades with leaf predictors chosen from a hypothesis set $H_k$ and node question functions selected from hypothesis sets $Q_j$. In the simplest form they present the following guarantee on the generalization error:
+The work on Deep cascades presents data dependent generalization guarantees for cascades with leaf predictors chosen from hypothesis sets $H_k$ and node questions selected from hypothesis sets $Q_j$. In the simplest form they present the following guarantee on the generalization error:
 \begin{equation}
 R(f) \leq \widehat{R}_S(f) + \sum_{k=1}^{l} \min \left( 4\left[ \sum_{j=1}^{d_k} \widehat{\mathfrak{R}}_S(Q_j) + \widehat{\mathfrak{R}}_S(H_k), \frac{m_k^+}{m} \right] \right)	 + \widetilde{O} \left( l \sqrt{\frac{\log pl}{m}} \right)
 \label{dcbound}
 \end{equation}
-where $l$ is the number of levels in the cascade and $p$ is defined as the number of hypothesis sets we choose from. That is we define $\mathcal{H}$ to be the set of $p$ hypothesis sets from which the hypothesis sets $H_k$ are selected. Similarly each $Q_k$ is selected out of a family of hypothesis sets $\mathcal{Q}$ of cardinality $p$. Since the paper considers depths of at max 4 the last term is practically insignificant and hence any cascade minimizing the first 2 terms will provide good generalization guarantees.
+where $l$ is the number of levels in the cascade. We define $\mathcal{H}$ to be the set of hypothesis sets from which the hypothesis sets $H_k$ are selected, and $\mathcal{Q}$ to be the set of hypothesis sets from which the sets $Q_k$ are selected. $p$ is the number of distinct hypothesis sets we can choose. Additionally, $m_k^+$ is the number of points reaching the leaf $k$ and are classified correctly, with $m$ being the total number of sample points. Since we consider depths of at most 4, the last term is practically insignificant and hence any cascade minimizing the first 2 terms will provide good generalization guarantees.
 \\With these guarantees in mind the paper provides an adaptation of the algorithm for use with SVMs at each level. The topology of the cascade is as shown in Figure \ref{topology}
 \begin{figure}[h]
 \centering
@@ -117,7 +116,7 @@ where $l$ is the number of levels in the cascade and $p$ is defined as the numbe
 \caption{Topology of Deepcascade SVM}
 \label{topology}
 \end{figure}
-\\That is at each internal node, an SVM is trained on the incoming points. Then the closest fraction $\mu_k$ of points to the separating hyperplane are removed from the current set of points and sent to the next level for it to be trained with a new SVM with a possibly different kernel. The remainder of $1-\mu_k$ fraction of points stay classified by the same hyperplane which is treated as that particular leaf hypothesis.
+\\That is, at each internal node, an SVM is trained on the incoming points. Then the closest fraction $\mu_k$ of points to the separating hyperplane are removed from the current set of points and sent to the next level for it to be trained with a new SVM with a possibly different kernel. The remainder of $1-\mu_k$ fraction of points stay classified by the same hyperplane which is treated as that particular leaf's hypothesis.
 %May not be needed
 \\The pseudocode for the DeepCascadeSVM is as follows:
 {\small \begingroup
@@ -145,7 +144,7 @@ leaf hypothesis sets $H_k$ are decision surfaces defined by polynomial kernels (
 The hypothesis $h_k \in H_k$ is learned via the SVM algorithm with a polynomial
 kernel of degree $\delta_k$ on subsample $S_k$ . The node question hypothesis set $Q_k$ is
 the set of indicator functions which indicate if a point is within a distance $c$ from the hyperplane such that $\mu_k|S_k|$ points lie within that distance $c$ from the hyperplane. 
-\\A search is done over all depths $[1 \cdots L]$, fraction of points $\mu_k \in \mathcal{M}$ and degree of kernels $\delta_k \in \mathcal{G}$ such that the resulting cascade minimizes the generalization error. We also see that the rademacher complexities from (\ref{dcbound}) have been bounded by the VC dimension of the respective SVM ($d_{f,j},d_{f,k}$) and that a factor $\gamma$ has been introduced to scale the hinge loss. Thus the DeepCascadeSVM only tries to get the minimal upper bound  in terms of the VC dimension rather than trying to minimize the rademacher complexities.
+\\A search is done over all depths $[1 \cdots L]$, fraction of points $\mu_k \in \mathcal{M}$ and degree of kernels $\delta_k \in \mathcal{G}$ to find a cascade that minimizes the generalization error using the aforementioned bounds. We also see that the Rademacher complexities from (\ref{dcbound}) have been bounded by the VC dimension of the respective SVM ($d_{f,j},d_{f,k}$) and that a factor $\gamma$ has been introduced to scale the hinge loss. Thus the DeepCascadeSVM only tries to get the minimal upper bound  in terms of the VC dimension rather than trying to minimize the Rademacher complexities.
 
 
 \subsection{Perceptron Algorithm}
@@ -206,22 +205,21 @@ We have adapted the deep cascades to work with kernelized perceptrons serving as
 \EndFunction
 \end{algorithmic}
 }
-The sample set is standardized using standard scaling before being sent to the algorithm. This is done to center the data and normalize it. The same scaling is applied to the test data as well. This centered scaling becomes quite important in the case of perceptrons as it learns only a linear homogeneous threshold function.
-\\The algorithm essentially consists of training perceptrons $h_k$ at each level (total of $l$ levels) with the incoming points using polynomial kernels of dimension $\delta_k$. Once the perceptron at level $k$ is trained on $S_k$, the distances to all points are measured as $w_k.x = \sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x)$ (ignoring the factor of $\lVert w_k \rVert$ as we just want to get the $\mu_k$ fraction of closest points). With the distances calculated we decide on a threshold as the distance from the hyperplane such that $\mu_k|S_k|$ points lie within that distance. The node question is then: whether or not a given point lies within this threshold from the trained hyperplane. This process is then repeated for each level.
-\\The algorithm generates multiple cascades for each of the depth $l \in [1 \cdots L]$, any sequence of fraction values $(\mu_k)_{1 \leq k \leq l} \subseteq \mathcal{M}$ and sequence of polynomial kernel degrees $(\delta_k)_{1 \leq k \leq l} \subseteq \mathcal{G}$. The node question and leaf hypothesis for these cascades are chosen as described above. Then the best cascade $f^*$ is chosen as the one that minimizes an upper bound on the generalization error bound of (\ref{dcbound}) similar to what is done for the DeepCascadeSVM \cite{deepcascades}. That is $f^*$ is chosen to minimize the bound:
+We standardize the features by removing the mean and scaling to unit variance for the samples before being sent to the algorithm. This is done to center the data and normalize it. The same scaling is applied to the test data as well (using the parameters used to scale the training data). This centered scaling becomes quite important in the case of perceptrons as it learns only a linear homogeneous threshold function.
+\\The algorithm essentially consists of training perceptrons $h_k$ at each level (total of $l$ levels) with the incoming points using polynomial kernels of dimension $\delta_k$. Once the perceptron at level $k$ is trained on $S_k$, the distances to all points are measured as $\Phi(w_k)\cdot \Phi(x) = K(w_k,x) = \sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x)$ (ignoring the factor of $\lVert w_k \rVert$ as we just want to get the $\mu_k$ fraction of the closest points). With the distances calculated we decide on a threshold as the distance from the hyperplane such that $\mu_k|S_k|$ points lie within that distance. The node question is then: whether or not a given point lies within this threshold from the trained hyperplane. If yes, the point is sent to the next level. This process is then repeated for each level.
+\\The algorithm generates multiple cascades for each of the depths $l \in [1 \cdots L]$, any sequence of fraction values $(\mu_k)_{1 \leq k \leq l} \subseteq \mathcal{M}$ and sequence of polynomial kernel degrees $(\delta_k)_{1 \leq k \leq l} \subseteq \mathcal{G}$. The best cascade $f^*$ is chosen as the one that minimizes an upper bound on the generalization error bound of (\ref{dcbound}) similar to what is done for the DeepCascadeSVM \cite{deepcascades}. That is, $f^*$ is chosen to minimize the bound:
 \begin{equation}
 R(f) \leq \widehat{R}_s(f) + \sum_{k=1}^{l} \min \left( 4\gamma \left[ \sum_{j=1}^{d_k} \sqrt{\frac{d_{f,j} \log\frac{em}{d_{f,j}}}{m}} + \sqrt{\frac{d_{f,k} \log\frac{em}{d_{f,k}}}{m}} \right] , \frac{m_k^+}{m} \right)
 \label{dcvcbound}
 \end{equation}
-where $d_k$ is the depth of node $k$ and $d_{f,k}$ is the VC dimension of the perceptron trained at level $k$ and the $\gamma$ parameter is introduced to scale the loss function. %TODO:Re-check.
+where $d_k$ is the depth of node $k$ and $d_{f,k}$ is the VC dimension of the perceptron trained at level $k$. The parameter $\gamma$ is introduced to scale down VC dimension upper bound since the original bounds are in terms of Rademacher complexities, which are harder to compute. We perform cross-validation to find the best $\gamma$ from a set of values. %TODO:Re-check.
 \\The VC dimension of a perceptron accepting samples of dimension $n$ and working with a polynomial kernel of degree $\delta$ is $\binom{n+\delta}{\delta}$. This can be seen by the definition of polynomial kernel: ($K(x,y) = (1+x \cdot y)^\delta$) and using multinomial theorem.
-\\The $\gamma$ is selected by doing a n-fold cross validation to select the best $\gamma$ from a set of values.
 
 \section{Experiments}
 We performed some preliminary experiments on the \emph{breastcancer, ionosphere} datasets from UCI machine learning repository \cite{Lichman:2013}.
 \\In our experiments we used the following parameters: max cascade depth $L=4$, the set of fraction values was chosen as $\mathcal{M} = \{ 0.2,0.4,0.6,0.8 \}$ and the degree of the kernels were chosen from $\mathcal{G} = \{ 1 \cdots 4 \}$.
-\\We have split our dataset into a $80\%$ training set and $20\%$ test set. The training set was inturn split into 3 folds and for each fold leaving that out for validation we trained on the other two. This way a 3-fold cross validation was performed to figure out the best $\gamma \in \{ 10^{-i} : i \in \{ 0,1,2,3 \} \}$.
-\\The results of our algorithm on these datasets is compared with the results of SVM and kernelized perceptron trained with polynomial kernels. The degree of the kernel to be used and the SVM hyper-parameters are determined by doing a 3-fold cross validation as described for the DeepCascadePerceptron. The results are shown in Table \ref{cvtable} and Table \ref{testtable}.
+\\We split our dataset into a $80\%$ training set and $20\%$ test set. The training set was used to generate 3 folds to perform 3-fold cross-validation with. We used this cross validation to figure out the best $\gamma \in \{ 10^{-i} : i \in \{ 0,1,2,3 \} \}$.
+\\The results of our algorithm on these datasets is compared with the results of SVM and kernelized perceptron trained with polynomial kernels. The degree of the kernel to be used and the SVM hyper-parameters are determined by doing a 3-fold cross-validation as described for the DeepCascadePerceptron. The results are shown in Table \ref{cvtable} and Table \ref{testtable}.
 \begin{table}[h]
 \begin{tabular}{| l | l | l | l | l |}
 \hline
@@ -253,6 +251,9 @@ german & 2 & 0.26 & 0.215 & 0.235\\
 
 
 \section{Conclusions}
+Deep cascades We also show how this performs faster than an SVM-based cascade while still benefiting from nature of the cascade.
+
+
 \nocite{fml}
 \nocite{code}
 \printbibliography
