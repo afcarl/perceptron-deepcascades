@@ -29,11 +29,18 @@ if __name__ == '__main__':
         origin = groups[0]
         fold = int(groups[1])
         gamma = float(groups[2])
+        #if gamma != 0.01: continue
+        #if origin != 'ionosphere_train': continue
         test_file = origin + '_test_%d' % fold
-
         (X_train, y_train, X_test, y_test) = pdc.load_dataset(test_file, test_file)
-        (e, mk_m) = dc.error(X_test, y_test)
+        print
+        print origin, fold,gamma
+        print
+        (e, mk_m) = dc.error(X_train, y_train)
         results[origin][gamma].append(e)
+        if gamma != dc.gamma:
+            print 'SHOULD NOT HAPPEN'
+            sys.exit(1)
 
     print '\nCross-validation errors:'
     for (origin, gamma_map) in results.items():

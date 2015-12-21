@@ -1,0 +1,11 @@
+breast_cancer:
+1: 129 out of 140 predictions correct (error: 0.078571429)
+2: 131 out of 140 predictions correct (error: 0.064285714)
+3: 135 out of 140 predictions correct (error: 0.035714286)
+4: 134 out of 140 predictions correct (error: 0.042857143)
+
+ionosphere:
+1: 58 out of 71 predictions correct (error: 0.183098592)
+2: 61 out of 71 predictions correct (error: 0.14084507)
+3: 63 out of 71 predictions correct (error: 0.112676056)
+4: 57 out of 71 predictions correct (error: 0.197183099)

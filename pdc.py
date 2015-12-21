@@ -246,8 +246,8 @@ class DeepCascades(object):
 
 
 class PerceptronDummyCascade(object):
-    def __init__(self, d=3, n_passes=4):
-        self.d = d
+    def __init__(self, minD=None, n_passes=None, *args, **kwargs):
+        self.d = minD
         self.n_passes = n_passes
         self.clf = None
 
