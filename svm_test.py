@@ -21,7 +21,7 @@ if __name__ == '__main__':
         scores_std = list()
         for C in C_s:
             svc.C = C
-            this_scores = cross_validation.cross_val_score(svc, X_train, y_train, n_jobs=1)
+            this_scores = cross_validation.cross_val_score(svc, X_train, y_train, n_jobs=1, cv=3)
             scores.append(np.mean(this_scores))
             scores_std.append(np.std(this_scores))
             all_scores.append((1.0-np.mean(this_scores), d, C))
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     all_scores = []
     for C in C_s:
         svc.C = C
-        this_scores = 1.0-cross_validation.cross_val_score(svc, X_train, y_train, n_jobs=1)
+        this_scores = 1.0-cross_validation.cross_val_score(svc, X_train, y_train, n_jobs=1, cv=3)
         all_scores.append((np.mean(this_scores), np.std(this_scores), C, best_d))
 
     all_scores.sort(key=lambda x: x[0])
