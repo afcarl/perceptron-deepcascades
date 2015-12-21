@@ -9,3 +9,9 @@ ionosphere:
 2: 61 out of 71 predictions correct (error: 0.14084507)
 3: 63 out of 71 predictions correct (error: 0.112676056)
 4: 57 out of 71 predictions correct (error: 0.197183099)
+
+german:
+1: 134 out of 200 predictions correct (error: 0.33)
+2: 145 out of 200 predictions correct (error: 0.275)
+3: 148 out of 200 predictions correct (error: 0.26)
+4: 153 out of 200 predictions correct (error: 0.235)
