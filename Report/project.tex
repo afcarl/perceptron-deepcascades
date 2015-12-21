@@ -196,7 +196,7 @@ We have adapted the deep cascades to work with kernelized perceptrons serving as
 		\For{$ k = 1$ to $l$}
 			\State{$h_k \gets$ KernelizedPerceptron$(S_k,poly\_kernel(\delta_k))$}
 			\State{$threshold \gets c_k : |\{ x_t : |\sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x_t)| \leq c_k \}| = \mu_k|S_k| $}	%\Comment{Gets the distance of $\mu_k$ fraction of closest point from hyperplane}
-			\State{$q_k \gets 1_{\sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x) \leq threshold}$}
+			\State{$q_k \gets 1_{|\sum_{i=1}^{|S_k|} \alpha_i y_i K(x_i,x)| \leq threshold}$}
 			\State{$S_{k+1} \gets q_{k}^{-1}(1) \cap S_k$}
 		\EndFor
 		\State{$f(\cdot) \gets \sum_{k=1}^{l-1} \left( \prod_{j=1}^{k-1} q_j \right) \bar{q_k}h_k + \left( \prod_{j=1}^{l} q_j \right) h_l$}
