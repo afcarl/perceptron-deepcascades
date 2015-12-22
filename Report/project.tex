@@ -228,7 +228,7 @@ The VC dimension of a perceptron accepting samples of dimension $n$ and working 
 Also since we are generating multiple cascades and since all cascades are independent of one another, we can parallelize the the process. We do this in our algorithm by training for trees with different max levels as separate processes. Similarly the cross validation for different values of $\gamma$ is also done in parallel.
 
 \section{Experiments}
-We performed some preliminary experiments on the \emph{breastcancer, ionosphere} datasets from UCI machine learning repository \cite{Lichman:2013}.
+We performed some preliminary experiments on the \emph{breastcancer, ionosphere, german} datasets from UCI machine learning repository \cite{Lichman:2013}.
 
 In our experiments we used the following parameters: max cascade depth $L=4$, the set of fraction values was chosen as $\mathcal{M} = \{ 0.2,0.4,0.6,0.8 \}$ and the degree of the kernels were chosen from $\mathcal{G} = \{ 1 \cdots 4 \}$.
 
@@ -246,7 +246,7 @@ ionosphere & 351 & 34 & 0.071 $\pm$ 0.032 & 0.093 $\pm$ 0.033 \\
 german & 1000 & 24 & 0.321 $\pm$ 0.012 & 0.236 $\pm$ 0.006\\
 \hline
 \end{tabular}
-\caption{Cross Validation error for DeepCascadePerceptron}
+\caption{Cross Validation error for DeepCascadePerceptron, SVM}
 \label{cvtable}
 \end{table}
 
